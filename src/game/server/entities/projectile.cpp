@@ -4,6 +4,10 @@
 #include <game/server/gamecontext.h>
 #include "projectile.h"
 
+
+// Dummy DC
+#include <engine/shared/config.h>
+
 CProjectile::CProjectile(CGameWorld *pGameWorld, int Type, int Owner, vec2 Pos, vec2 Dir, int Span,
 		int Damage, bool Explosive, float Force, int SoundImpact, int Weapon)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_PROJECTILE)
@@ -76,7 +80,31 @@ void CProjectile::Tick()
 			GameServer()->CreateExplosion(CurPos, m_Owner, m_Weapon, false);
 
 		else if(TargetChr)
+		{
 			TargetChr->TakeDamage(m_Direction * max(0.001f, m_Force), m_Damage, m_Owner, m_Weapon);
+
+			// Dummy DC
+			if(TargetChr->GetPlayer()->m_IsDummy && g_Config.m_SvBouncy)
+			{
+				if(m_Weapon == WEAPON_GUN)
+					TargetChr->Core()->m_Vel *= 0;
+
+				for(int i = 0; i < MAX_CLIENTS-1 && m_Weapon == WEAPON_SHOTGUN; i++)
+				{
+					CCharacter *pChar = GameServer()->GetPlayerChar(i);
+
+					if(!pChar || !pChar->IsAlive())
+						continue;
+
+					if(pChar->Core()->m_HookedPlayer == MAX_CLIENTS-1)
+					{
+						pChar->Core()->m_HookedPlayer = -1;
+						pChar->Core()->m_HookPos = m_Pos;
+						pChar->Core()->m_HookState = HOOK_RETRACTED;
+					}
+				}
+			}
+		}
 
 		GameServer()->m_World.DestroyEntity(this);
 	}

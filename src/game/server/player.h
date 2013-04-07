@@ -1,5 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #ifndef GAME_SERVER_PLAYER_H
 #define GAME_SERVER_PLAYER_H
 
@@ -13,7 +15,7 @@ class CPlayer
 	MACRO_ALLOC_POOL_ID()
 
 public:
-	CPlayer(CGameContext *pGameServer, int ClientID, int Team);
+	CPlayer(CGameContext *pGameServer, int ClientID, int Team, bool Dummy);
 	~CPlayer();
 
 	void Init(int CID);
@@ -34,6 +36,12 @@ public:
 
 	void KillCharacter(int Weapon = WEAPON_GAME);
 	CCharacter *GetCharacter();
+
+
+	// Dummy
+	bool m_IsDummy;
+	vec2 m_LastPos;
+	bool m_Moved;
 
 	//---------------------------------------------------------
 	// this is used for snapping so we know how we can clip the view for the player

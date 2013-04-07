@@ -23,6 +23,10 @@ public:
 		ENTTYPE_PICKUP,
 		ENTTYPE_FLAG,
 		ENTTYPE_CHARACTER,
+
+		// Dummy DC
+		ENTTYPE_BASE,
+
 		NUM_ENTTYPES
 	};
 
@@ -96,6 +100,11 @@ public:
 		Returns:
 			Returns a pointer to the closest CCharacter or NULL if no CCharacter is close enough.
 	*/
+
+	// Dummy DC
+	class CCharacter *ClosestCharType(vec2 Pos, bool Human = true, CCharacter *pNotThis = 0);
+	int ResetBases();
+
 	class CCharacter *ClosestCharacter(vec2 Pos, float Radius, CEntity *ppNotThis);
 
 	/*

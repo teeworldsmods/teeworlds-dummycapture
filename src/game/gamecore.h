@@ -1,5 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #ifndef GAME_GAMECORE_H
 #define GAME_GAMECORE_H
 
@@ -177,6 +179,9 @@ class CCharacterCore
 	CWorldCore *m_pWorld;
 	CCollision *m_pCollision;
 public:
+	// Dummy
+	bool m_IsDummy;
+
 	vec2 m_Pos;
 	vec2 m_Vel;
 

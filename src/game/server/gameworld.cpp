@@ -12,7 +12,7 @@ CGameWorld::CGameWorld()
 {
 	m_pGameServer = 0x0;
 	m_pServer = 0x0;
-
+	
 	m_Paused = false;
 	m_ResetRequested = false;
 	for(int i = 0; i < NUM_ENTTYPES; i++)
@@ -218,7 +218,7 @@ CCharacter *CGameWorld::ClosestCharacter(vec2 Pos, float Radius, CEntity *pNotTh
 	CCharacter *p = (CCharacter *)GameServer()->m_World.FindFirst(ENTTYPE_CHARACTER);
 	for(; p; p = (CCharacter *)p->TypeNext())
  	{
-		if(p == pNotThis)
+		if(p == pNotThis || p->GetPlayer()->m_IsDummy)
 			continue;
 
 		float Len = distance(Pos, p->m_Pos);
@@ -233,4 +233,49 @@ CCharacter *CGameWorld::ClosestCharacter(vec2 Pos, float Radius, CEntity *pNotTh
 	}
 
 	return pClosest;
+}
+
+// Dummy DC
+CCharacter *CGameWorld::ClosestCharType(vec2 Pos, bool Human, CCharacter *pNotThis)
+{
+	// Find Humans
+	float ClosestRange = 0.f;
+	CCharacter *pClosest = 0;
+
+	CCharacter *p = (CCharacter *)GameServer()->m_World.FindFirst(ENTTYPE_CHARACTER);
+	for(; p; p = (CCharacter *)p->TypeNext())
+ 	{
+		if(p == pNotThis)
+			continue;
+
+		if(Human && p->GetPlayer()->m_IsDummy)
+			continue;
+		else if(!Human && !p->GetPlayer()->m_IsDummy)
+			continue;
+
+		float Len = distance(Pos, p->m_Pos);
+		
+		if(Len < ClosestRange || !ClosestRange)
+		{
+			ClosestRange = Len;
+			pClosest = p;
+		}
+	}
+
+	return pClosest;
+}
+
+// Dummy DC
+int CGameWorld::ResetBases()
+{
+	int Num = 0;
+	for(CEntity *pEnt = m_apFirstEntityTypes[ENTTYPE_BASE]; pEnt; )
+	{
+		m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+		pEnt->Reset();
+		Num++;
+		pEnt = m_pNextTraverseEntity;
+	}
+
+	return Num;
 }

@@ -4,6 +4,9 @@
 #include <game/server/gamecontext.h>
 #include "laser.h"
 
+// Dummy DC
+#include <engine/shared/config.h>
+
 CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEnergy, int Owner)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
 {
@@ -25,6 +28,15 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 	CCharacter *Hit = GameServer()->m_World.IntersectCharacter(m_Pos, To, 0.f, At, OwnerChar);
 	if(!Hit)
 		return false;
+
+	// Dummy DC
+	if(Hit->GetPlayer()->m_IsDummy && g_Config.m_SvBouncy && OwnerChar && OwnerChar->IsAlive() && Hit->IsAlive())
+	{
+		vec2 TempPos = Hit->m_Pos;
+		Hit->Core()->m_Pos = OwnerChar->m_Pos;
+		OwnerChar->Core()->m_Pos = TempPos;
+		Hit->m_aMoveID[OwnerChar->GetPlayer()->GetTeam()] = OwnerChar->GetPlayer()->GetCID();
+	}
 
 	m_From = From;
 	m_Pos = At;

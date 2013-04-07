@@ -1,6 +1,11 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #include "gamecore.h"
+
+// Dummy DC
+#include <engine/shared/config.h>
 
 const char *CTuningParams::m_apNames[] =
 {
@@ -76,6 +81,12 @@ void CCharacterCore::Reset()
 
 void CCharacterCore::Tick(bool UseInput)
 {
+	// Dummy DC
+	CCharacterCore *pCharCore = m_pWorld->m_apCharacters[15];
+
+	if(pCharCore && pCharCore == this && !m_IsDummy)
+		m_IsDummy = true;
+
 	float PhysSize = 28.0f;
 	m_TriggeredEvents = 0;
 
@@ -363,7 +374,9 @@ void CCharacterCore::Move()
 	m_Vel.x = m_Vel.x*RampValue;
 
 	vec2 NewPos = m_Pos;
-	m_pCollision->MoveBox(&NewPos, &m_Vel, vec2(28.0f, 28.0f), 0);
+
+	//Dummy
+	m_pCollision->MoveBox(&NewPos, &m_Vel, vec2(28.0f, 28.0f), (m_IsDummy && g_Config.m_SvBouncy)?0.5:0);
 
 	m_Vel.x = m_Vel.x*(1.0f/RampValue);
 

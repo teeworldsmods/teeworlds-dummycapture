@@ -1,11 +1,14 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #include <engine/shared/config.h>
 #include <game/mapitems.h>
 
 #include <game/generated/protocol.h>
 
 #include "entities/pickup.h"
+
 #include "gamecontroller.h"
 #include "gamecontext.h"
 
@@ -92,15 +95,15 @@ void IGameController::EvaluateSpawnType(CSpawnEval *pEval, int Type)
 	}
 }
 
-bool IGameController::CanSpawn(int Team, vec2 *pOutPos)
+bool IGameController::CanSpawn(int Team, vec2 *pOutPos, bool Dummy)
 {
 	CSpawnEval Eval;
 
 	// spectators can't spawn
-	if(Team == TEAM_SPECTATORS)
+	if(Team == TEAM_SPECTATORS && !Dummy)
 		return false;
 
-	if(IsTeamplay())
+	if(IsTeamplay() && !Dummy)
 	{
 		Eval.m_FriendlyTeam = Team;
 
@@ -115,23 +118,35 @@ bool IGameController::CanSpawn(int Team, vec2 *pOutPos)
 	}
 	else
 	{
+		// Dummy DC
 		EvaluateSpawnType(&Eval, 0);
-		EvaluateSpawnType(&Eval, 1);
-		EvaluateSpawnType(&Eval, 2);
+
+		if(pOutPos->x || pOutPos->y)
+			Eval.m_Pos = *pOutPos;
+		//EvaluateSpawnType(&Eval, 1);
+		//EvaluateSpawnType(&Eval, 2);
 	}
 
 	*pOutPos = Eval.m_Pos;
 	return Eval.m_Got;
 }
 
+// Dummy DC
+void IGameController::AddScore(int Team)
+{}
 
 bool IGameController::OnEntity(int Index, vec2 Pos)
 {
 	int Type = -1;
 	int SubType = 0;
 
+	// Dummy DC
 	if(Index == ENTITY_SPAWN)
+	{
+		if(!GameServer()->m_apPlayers[g_Config.m_SvMaxClients-1])
+			GameServer()->NewDummy(g_Config.m_SvMaxClients-1, true);
 		m_aaSpawnPoints[0][m_aNumSpawnPoints[0]++] = Pos;
+	}
 	else if(Index == ENTITY_SPAWN_RED)
 		m_aaSpawnPoints[1][m_aNumSpawnPoints[1]++] = Pos;
 	else if(Index == ENTITY_SPAWN_BLUE)
@@ -340,15 +355,13 @@ int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 	// do scoreing
 	if(!pKiller || Weapon == WEAPON_GAME)
 		return 0;
-	if(pKiller == pVictim->GetPlayer())
-		pVictim->GetPlayer()->m_Score--; // suicide
+	
+	// Dummy
+	if(IsTeamplay() && pVictim->GetPlayer()->GetTeam() == pKiller->GetTeam())
+		pKiller->m_Score--; // teamkill
 	else
-	{
-		if(IsTeamplay() && pVictim->GetPlayer()->GetTeam() == pKiller->GetTeam())
-			pKiller->m_Score--; // teamkill
-		else
-			pKiller->m_Score++; // normal kill
-	}
+		pKiller->m_Score++; // normal kill
+	
 	if(Weapon == WEAPON_SELF)
 		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3.0f;
 	return 0;
@@ -484,9 +497,11 @@ void IGameController::Tick()
 	// check for inactive players
 	if(g_Config.m_SvInactiveKickTime > 0)
 	{
+		
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && !Server()->IsAuthed(i))
+			// Dummy
+			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && !Server()->IsAuthed(i) && !GameServer()->m_apPlayers[i]->m_IsDummy)
 			{
 				if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick+g_Config.m_SvInactiveKickTime*Server()->TickSpeed()*60)
 				{
@@ -502,6 +517,7 @@ void IGameController::Tick()
 						{
 							// move player to spectator if the reserved slots aren't filled yet, kick him otherwise
 							int Spectators = 0;
+
 							for(int j = 0; j < MAX_CLIENTS; ++j)
 								if(GameServer()->m_apPlayers[j] && GameServer()->m_apPlayers[j]->GetTeam() == TEAM_SPECTATORS)
 									++Spectators;

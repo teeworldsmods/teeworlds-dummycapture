@@ -63,6 +63,13 @@ public:
 	bool IsAlive() const { return m_Alive; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 
+	// Dummy DC
+	bool Moving() const { return (abs(m_Core.m_Vel.x) > 0.1f || abs(m_Core.m_Vel.y) > 0.1f); }
+	void DummyCapture();
+	CCharacterCore *Core() { return &m_Core; }
+	float m_DummyMove;
+	int m_aMoveID[2];
+
 private:
 	// player controlling this character
 	class CPlayer *m_pPlayer;

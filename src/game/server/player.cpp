@@ -1,5 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #include <new>
 #include <engine/shared/config.h>
 #include "player.h"
@@ -9,7 +11,8 @@ MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
 IServer *CPlayer::Server() const { return m_pGameServer->Server(); }
 
-CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
+// Dummy DC
+CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team, bool Dummy)
 {
 	m_pGameServer = pGameServer;
 	m_RespawnTick = Server()->Tick();
@@ -21,6 +24,10 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_SpectatorID = SPEC_FREEVIEW;
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
+
+	// Dummy DC
+	m_IsDummy = Dummy;
+	m_LastPos = vec2(0, 0);
 }
 
 CPlayer::~CPlayer()
@@ -37,7 +44,9 @@ void CPlayer::Tick()
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
 
-	Server()->SetClientScore(m_ClientID, m_Score);
+	// Dummy
+	if(!m_IsDummy)
+		Server()->SetClientScore(m_ClientID, m_Score);
 
 	// do latency stuff
 	{
@@ -110,7 +119,7 @@ void CPlayer::Snap(int SnappingClient)
 	CNetObj_ClientInfo *pClientInfo = static_cast<CNetObj_ClientInfo *>(Server()->SnapNewItem(NETOBJTYPE_CLIENTINFO, m_ClientID, sizeof(CNetObj_ClientInfo)));
 	if(!pClientInfo)
 		return;
-
+	
 	StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
 	StrToInts(&pClientInfo->m_Clan0, 3, Server()->ClientClan(m_ClientID));
 	pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
@@ -124,6 +133,7 @@ void CPlayer::Snap(int SnappingClient)
 		return;
 
 	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
+
 	pPlayerInfo->m_Local = 0;
 	pPlayerInfo->m_ClientID = m_ClientID;
 	pPlayerInfo->m_Score = m_Score;
@@ -226,7 +236,8 @@ void CPlayer::KillCharacter(int Weapon)
 
 void CPlayer::Respawn()
 {
-	if(m_Team != TEAM_SPECTATORS)
+	// Dummy DC
+	if(m_Team != TEAM_SPECTATORS || m_IsDummy)
 		m_Spawning = true;
 }
 
@@ -265,9 +276,10 @@ void CPlayer::SetTeam(int Team)
 
 void CPlayer::TryRespawn()
 {
-	vec2 SpawnPos;
-
-	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
+	// Dummy DC
+	vec2 SpawnPos = m_LastPos;
+	
+	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos, m_IsDummy))
 		return;
 
 	m_Spawning = false;

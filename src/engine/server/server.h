@@ -1,5 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+/* If you miss that file, contact Pikotee, because he changed some stuff here ...			 */
+/*	... and would like to be mentioned in credits in case of using his code					 */
+
 #ifndef ENGINE_SERVER_SERVER_H
 #define ENGINE_SERVER_SERVER_H
 
@@ -69,6 +71,9 @@ public:
 			STATE_CONNECTING,
 			STATE_READY,
 			STATE_INGAME,
+
+			// Dummy
+			STATE_DUMMY,
 
 			SNAPRATE_INIT=0,
 			SNAPRATE_FULL,
@@ -185,6 +190,10 @@ public:
 
 	void SendServerInfo(NETADDR *pAddr, int Token);
 	void UpdateServerInfo();
+
+	// Dummy
+	void DummyJoin(int DummyID, const char *pDummyName, const char *pDummyClan, int Country);
+	void DummyLeave(int DummyID, const char *pDummyName = 0);
 
 	int BanAdd(NETADDR Addr, int Seconds, const char *pReason);
 	int BanRemove(NETADDR Addr);

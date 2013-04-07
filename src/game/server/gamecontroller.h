@@ -127,8 +127,9 @@ public:
 
 	virtual void OnPlayerInfoChange(class CPlayer *pP);
 
-	//
-	virtual bool CanSpawn(int Team, vec2 *pPos);
+	// Dummy DC
+	virtual bool CanSpawn(int Team, vec2 *pPos, bool Dummy);
+	virtual void AddScore(int Team);
 
 	/*
 

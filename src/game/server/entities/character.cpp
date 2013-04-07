@@ -77,6 +77,11 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
+	// Dummy DC
+	m_aMoveID[TEAM_RED] = -1;
+	m_aMoveID[TEAM_BLUE] = -1;
+	m_pPlayer->m_Moved = false;
+
 	return true;
 }
 
@@ -538,8 +543,75 @@ void CCharacter::ResetInput()
 	m_LatestPrevInput = m_LatestInput = m_Input;
 }
 
+// Dummy DC
+void CCharacter::DummyCapture()
+{
+	if(m_ActiveWeapon != WEAPON_HAMMER)
+		m_ActiveWeapon = WEAPON_HAMMER;
+
+	CCharacter *pChr = GameServer()->m_World.ClosestCharType(m_Pos, true);
+	if(pChr && pChr->IsAlive())
+	{
+		m_Input.m_TargetX = pChr->m_Pos.x-m_Pos.x;
+		m_Input.m_TargetY = pChr->m_Pos.y-m_Pos.y;
+	}
+
+	if(!Moving() && IsGrounded())
+	{
+		m_Core.m_Vel.x = 0;
+		m_aMoveID[TEAM_RED] = -1;
+		m_aMoveID[TEAM_BLUE] = -1;
+	}
+	
+	int Hooked = false;
+	int PullID = -1;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		CCharacter *pChar = GameServer()->GetPlayerChar(i);
+
+		if(!pChar || !pChar->IsAlive() || pChar == this)
+			continue;
+
+		if(pChar->Core()->m_HookedPlayer == m_pPlayer->GetCID())
+		{
+			Hooked = true;
+			m_aMoveID[GameServer()->m_apPlayers[i]->GetTeam()] = i;
+			m_pPlayer->m_Moved = true;
+		}
+		else
+		{
+			float Distance = distance(Core()->m_Pos, pChar->Core()->m_Pos);
+			if(Distance < ms_PhysSize*1.25f && Distance > 0.0f)
+				PullID = i;
+		}
+	}
+
+	if(!Hooked && PullID != -1)
+	{
+		m_pPlayer->m_Moved = true;
+		m_aMoveID[GameServer()->m_apPlayers[PullID]->GetTeam()] = PullID;
+	}
+	else if(!Hooked && PullID == -1 && IsGrounded() && m_Core.m_Vel.x < 1.0f)
+	{
+		m_pPlayer->m_LastPos = m_Pos;
+		m_Core.m_Vel.x = 0;
+	}
+
+	if(g_Config.m_SvBouncy)
+	{
+		m_Core.m_Vel.x /= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction):(GameServer()->Tuning()->m_AirFriction); // Reset back to 100% of velocity instead of 50(Ground) and 95(Air)
+		m_Core.m_Vel.x *= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction+0.3f):(GameServer()->Tuning()->m_AirFriction+0.02f); // Set to 80%(Ground) and 98(Air) of velocity
+		m_Core.m_Vel.y -= GameServer()->Tuning()->m_Gravity/5; // Decrease Gravity to 20%
+	}
+
+}
+
 void CCharacter::Tick()
 {
+	// Dummy DC
+	if(m_pPlayer->m_IsDummy)
+		DummyCapture();
+
 	if(m_pPlayer->m_ForceBalanced)
 	{
 		char Buf[128];
@@ -627,8 +699,8 @@ void CCharacter::TickDefered()
 	if(Events&COREEVENT_HOOK_ATTACH_GROUND) GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_GROUND, Mask);
 	if(Events&COREEVENT_HOOK_HIT_NOHOOK) GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, Mask);
 
-
-	if(m_pPlayer->GetTeam() == TEAM_SPECTATORS)
+	// Dummy DC
+	if(m_pPlayer->GetTeam() == TEAM_SPECTATORS && !m_pPlayer->m_IsDummy)
 	{
 		m_Pos.x = m_Input.m_TargetX;
 		m_Pos.y = m_Input.m_TargetY;
@@ -705,12 +777,27 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
 	m_Core.m_Vel += Force;
 
+	if(m_pPlayer->m_IsDummy)
+	{
+		if((Weapon == WEAPON_GRENADE || Weapon == WEAPON_HAMMER) && GameServer()->m_apPlayers[From])
+		{
+			m_pPlayer->m_Moved = true;
+			m_aMoveID[GameServer()->m_apPlayers[From]->GetTeam()] = From;
+		}
+
+		return false;
+	}
+	// Dummy DC
 	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From) && !g_Config.m_SvTeamdamage)
 		return false;
 
-	// m_pPlayer only inflicts half damage on self
 	if(From == m_pPlayer->GetCID())
-		Dmg = max(1, Dmg/2);
+	{
+		if(g_Config.m_SvSelfDMG)
+			Dmg = max(1, Dmg/2);
+		else
+			return false;
+	}
 
 	m_DamageTaken++;
 
@@ -825,7 +912,8 @@ void CCharacter::Snap(int SnappingClient)
 		m_EmoteStop = -1;
 	}
 
-	pCharacter->m_Emote = m_EmoteType;
+	// Dummy DC
+	pCharacter->m_Emote = m_pPlayer->m_IsDummy?EMOTE_SURPRISE:m_EmoteType;
 
 	pCharacter->m_AmmoCount = 0;
 	pCharacter->m_Health = 0;
@@ -845,11 +933,15 @@ void CCharacter::Snap(int SnappingClient)
 			pCharacter->m_AmmoCount = m_aWeapons[m_ActiveWeapon].m_Ammo;
 	}
 
-	if(pCharacter->m_Emote == EMOTE_NORMAL)
+	// Dummy DC
+	if(pCharacter->m_Emote == EMOTE_NORMAL || (pCharacter->m_Emote == EMOTE_SURPRISE && m_pPlayer->m_IsDummy))
 	{
 		if(250 - ((Server()->Tick() - m_LastAction)%(250)) < 5)
 			pCharacter->m_Emote = EMOTE_BLINK;
 	}
 
 	pCharacter->m_PlayerFlags = GetPlayer()->m_PlayerFlags;
+
+	/*if(SnappingClient == m_pPlayer->GetCID() && GetPlayer()->m_IsDummy)
+		pCharacter->m_Dummy = GetPlayer()->m_IsDummy;*/
 }
