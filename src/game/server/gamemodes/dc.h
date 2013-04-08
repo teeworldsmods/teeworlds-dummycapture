@@ -13,7 +13,6 @@ private:
 	{
 		DUMMY_DEAD=-3,
 		CAPTURED=-1,
-		DUMMY=15
 	};
 
 	int Captured;

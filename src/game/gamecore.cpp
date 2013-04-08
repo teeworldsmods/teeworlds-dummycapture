@@ -82,7 +82,7 @@ void CCharacterCore::Reset()
 void CCharacterCore::Tick(bool UseInput)
 {
 	// Dummy DC
-	CCharacterCore *pCharCore = m_pWorld->m_apCharacters[15];
+	CCharacterCore *pCharCore = m_pWorld->m_apCharacters[g_Config.m_SvMaxClients-1];
 
 	if(pCharCore && pCharCore == this && !m_IsDummy)
 		m_IsDummy = true;

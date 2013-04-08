@@ -63,7 +63,7 @@ void CGameControllerDC::Snap(int SnappingClient)
 
 	int State;
 
-	CCharacter *pChar = GameServer()->GetPlayerChar(DUMMY);
+	CCharacter *pChar = GameServer()->GetPlayerChar(g_Config.m_SvMaxClients-1);
 
 	if(!pChar)
 		State = DUMMY_DEAD;
@@ -71,13 +71,13 @@ void CGameControllerDC::Snap(int SnappingClient)
 		Captured = -1;
 
 
-	pGameDataObj->m_FlagCarrierRed = ((Captured == TEAM_RED)?CAPTURED:(State == DUMMY_DEAD?DUMMY_DEAD:(pChar->m_aMoveID[TEAM_RED] == -1?DUMMY:pChar->m_aMoveID[TEAM_RED])));
-	pGameDataObj->m_FlagCarrierBlue = ((Captured == TEAM_BLUE)?CAPTURED:(State == DUMMY_DEAD?DUMMY_DEAD:(pChar->m_aMoveID[TEAM_BLUE] == -1?DUMMY:pChar->m_aMoveID[TEAM_BLUE])));
+	pGameDataObj->m_FlagCarrierRed = ((Captured == TEAM_RED)?CAPTURED:(State == DUMMY_DEAD?DUMMY_DEAD:(pChar->m_aMoveID[TEAM_RED] == -1?(g_Config.m_SvMaxClients-1):pChar->m_aMoveID[TEAM_RED])));
+	pGameDataObj->m_FlagCarrierBlue = ((Captured == TEAM_BLUE)?CAPTURED:(State == DUMMY_DEAD?DUMMY_DEAD:(pChar->m_aMoveID[TEAM_BLUE] == -1?(g_Config.m_SvMaxClients-1):pChar->m_aMoveID[TEAM_BLUE])));
 }
 
-// Dummy DC
 void CGameControllerDC::AddScore(int Team)
 {
+	const int DUMMY = g_Config.m_SvMaxClients-1;
 	char aBuf[128];
 
 	int MoveID = -1;
@@ -128,7 +128,8 @@ void CGameControllerDC::Tick()
 {
 	IGameController::Tick();
 
-	// Dummy DC
+	const int DUMMY = g_Config.m_SvMaxClients-1;
+
 	bool ResetDummy = true;
 	for(int i = 0; i < MAX_CLIENTS-1; i++)
 	{
