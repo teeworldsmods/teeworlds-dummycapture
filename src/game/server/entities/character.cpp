@@ -558,7 +558,6 @@ void CCharacter::DummyCapture()
 
 	if(!Moving() && IsGrounded())
 	{
-		m_Core.m_Vel.x = 0;
 		m_aMoveID[TEAM_RED] = -1;
 		m_aMoveID[TEAM_BLUE] = -1;
 	}
@@ -586,6 +585,8 @@ void CCharacter::DummyCapture()
 		}
 	}
 
+	bool ResetVelocity = false;
+
 	if(!Hooked && PullID != -1)
 	{
 		m_pPlayer->m_Moved = true;
@@ -593,14 +594,28 @@ void CCharacter::DummyCapture()
 	}
 	else if(!Hooked && PullID == -1 && IsGrounded() && m_Core.m_Vel.x < 1.0f)
 	{
-		m_pPlayer->m_LastPos = m_Pos;
-		m_Core.m_Vel.x = 0;
+		if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
+		GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
+		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
+		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
+		GameLayerClipped(m_Pos))
+		{
+			// Don't save on Deathtiles
+		}
+		else
+		{
+			m_pPlayer->m_LastPos = m_Pos;
+			ResetVelocity = true;
+		}
 	}
 
 	if(g_Config.m_SvBouncy)
 	{
-		m_Core.m_Vel.x /= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction):(GameServer()->Tuning()->m_AirFriction); // Reset back to 100% of velocity instead of 50(Ground) and 95(Air)
-		m_Core.m_Vel.x *= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction+0.3f):(GameServer()->Tuning()->m_AirFriction+0.02f); // Set to 80%(Ground) and 98(Air) of velocity
+		if(!ResetVelocity)
+		{
+			m_Core.m_Vel.x /= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction):(GameServer()->Tuning()->m_AirFriction); // Reset back to 100% of velocity instead of 50(Ground) and 95(Air)
+			m_Core.m_Vel.x *= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction+0.3f):(GameServer()->Tuning()->m_AirFriction+0.02f); // Set to 80%(Ground) and 98(Air) of velocity
+		}
 		m_Core.m_Vel.y -= GameServer()->Tuning()->m_Gravity/5; // Decrease Gravity to 20%
 	}
 
