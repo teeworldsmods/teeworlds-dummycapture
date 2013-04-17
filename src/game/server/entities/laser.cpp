@@ -37,11 +37,18 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 		OwnerChar->Core()->m_Pos = TempPos;
 		Hit->m_aMoveID[OwnerChar->GetPlayer()->GetTeam()] = OwnerChar->GetPlayer()->GetCID();
 	}
+	else
+	{
+		if(GameServer()->m_Insta && !Hit->GetPlayer()->m_IsDummy)
+			Hit->Die(m_Owner, WEAPON_RIFLE);
+		else
+			Hit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
+	}
 
 	m_From = From;
 	m_Pos = At;
 	m_Energy = -1;
-	Hit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
+	
 	return true;
 }
 

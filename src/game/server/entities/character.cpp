@@ -68,6 +68,12 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Core.m_Pos = m_Pos;
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
 
+	// Dummy DC
+	m_PredictedCore.Reset();
+	m_PredictedCore.Init(&GameServer()->m_World.m_TestCore, GameServer()->Collision());
+	m_PredictedCore.m_Pos = m_Pos;
+	GameServer()->m_World.m_TestCore.m_apCharacters[m_pPlayer->GetCID()] = &m_PredictedCore;
+
 	m_ReckoningTick = 0;
 	mem_zero(&m_SendCore, sizeof(m_SendCore));
 	mem_zero(&m_ReckoningCore, sizeof(m_ReckoningCore));
@@ -87,12 +93,19 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 void CCharacter::Destroy()
 {
+	// Dummy DC
+	GameServer()->m_World.m_TestCore.m_apCharacters[m_pPlayer->GetCID()] = 0;
+
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	m_Alive = false;
 }
 
 void CCharacter::SetWeapon(int W)
 {
+	// Dummy DC
+	if(GameServer()->m_Insta)
+		W = m_ActiveWeapon?WEAPON_HAMMER:WEAPON_RIFLE;
+
 	if(W == m_ActiveWeapon)
 		return;
 
@@ -626,6 +639,17 @@ void CCharacter::Tick()
 	// Dummy DC
 	if(m_pPlayer->m_IsDummy)
 		DummyCapture();
+	else
+	{
+		if(GameServer()->m_Insta && m_aWeapons[WEAPON_RIFLE].m_Ammo != -1)
+		{
+			GiveWeapon(WEAPON_RIFLE, -1);
+			m_LastWeapon = WEAPON_HAMMER;
+			m_ActiveWeapon = WEAPON_RIFLE;
+		}
+		else if(!GameServer()->m_Insta && m_aWeapons[WEAPON_RIFLE].m_Ammo == -1)
+			m_aWeapons[WEAPON_RIFLE].m_Ammo = 10;
+	}
 
 	if(m_pPlayer->m_ForceBalanced)
 	{
@@ -638,6 +662,20 @@ void CCharacter::Tick()
 
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
+
+	// Dummy DC
+	CNetObj_Character pTest;
+	m_Core.Write(&pTest);
+	m_PredictedCore.Read(&pTest);
+	m_PredictedCore.m_Input = m_Input;
+
+	float PredictionLatency = m_pPlayer->m_aActLatency[m_pPlayer->GetCID()] * 0.05f;
+	for(m_PredictionTick = 0; m_PredictionTick < PredictionLatency; m_PredictionTick++)
+	{
+		m_PredictedCore.Tick(true);
+		m_PredictedCore.Move();
+		m_PredictedCore.Quantize();
+	}
 
 	// handle death-tiles and leaving gamelayer
 	if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
@@ -784,6 +822,10 @@ void CCharacter::Die(int Killer, int Weapon)
 
 	m_Alive = false;
 	GameServer()->m_World.RemoveEntity(this);
+
+	// Dummy DC
+	GameServer()->m_World.m_TestCore.m_apCharacters[m_pPlayer->GetCID()] = 0;
+
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
 }
@@ -792,6 +834,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
 	m_Core.m_Vel += Force;
 
+	// Dummy DC
 	if(m_pPlayer->m_IsDummy)
 	{
 		if((Weapon == WEAPON_GRENADE || Weapon == WEAPON_HAMMER) && GameServer()->m_apPlayers[From])
@@ -802,6 +845,10 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 
 		return false;
 	}
+
+	if(GameServer()->m_Insta)
+		return false;
+
 	// Dummy DC
 	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From) && !g_Config.m_SvTeamdamage)
 		return false;
@@ -912,12 +959,21 @@ void CCharacter::Snap(int SnappingClient)
 		// no dead reckoning when paused because the client doesn't know
 		// how far to perform the reckoning
 		pCharacter->m_Tick = 0;
-		m_Core.Write(pCharacter);
+		m_PredictedCore.Write(pCharacter);
+		//m_Core.Write(pCharacter);
 	}
 	else
 	{
-		pCharacter->m_Tick = m_ReckoningTick;
-		m_SendCore.Write(pCharacter);
+		/*if(GameServer()->m_apPlayers[SnappingClient] && GameServer()->m_apPlayers[SnappingClient]->m_Prediction)
+		{
+			pCharacter->m_Tick = Server()->Tick() + m_PredictionTick;
+			m_PredictedCore.Write(pCharacter);
+		}
+		else*/
+		{
+			pCharacter->m_Tick = m_ReckoningTick;
+			m_SendCore.Write(pCharacter);
+		}
 	}
 
 	// set emote

@@ -6,6 +6,8 @@
 #include <game/server/gamecontext.h>
 #include "base.h"
 
+#include <engine/shared/config.h>
+
 CBase::CBase(CGameWorld *pGameWorld, vec2 Pos, int Type)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_BASE)
 {
@@ -26,10 +28,12 @@ void CBase::Reset()
 
 void CBase::Tick()
 {
-	if(!GameServer()->m_apPlayers[15])
+	const int DUMMY = g_Config.m_SvMaxClients-1;
+
+	if(!GameServer()->m_apPlayers[DUMMY])
 		return;
 
-	CCharacter *pChr = GameServer()->GetPlayerChar(15);
+	CCharacter *pChr = GameServer()->GetPlayerChar(DUMMY);
 	if(pChr && pChr->IsAlive())
 	{
 		if(pChr->Moving()) // useless now

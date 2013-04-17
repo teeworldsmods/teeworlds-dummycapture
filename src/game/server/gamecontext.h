@@ -63,6 +63,9 @@ class CGameContext : public IGameServer
 	static void ConVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
+	// Dummy DC
+	static void ConInsta(IConsole::IResult *pResult, void *pUserData);
+
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
 
@@ -140,6 +143,9 @@ public:
 
 	// Dummy
 	void NewDummy(int DummyID, bool CustomColor = false, int ColorBody = 12895054, int ColorFeet = 12895054, const char *pSkin = "coala", const char *pName = "", const char *pClan = "Dummy", int Country = -1);
+
+	// Dummy DC
+	bool m_Insta;
 
 	//
 	void CheckPureTuning();

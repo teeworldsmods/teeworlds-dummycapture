@@ -132,12 +132,13 @@ void CPlayer::Snap(int SnappingClient)
 	if(!pPlayerInfo)
 		return;
 
-	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
+	// Dummy DC
+	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : (m_Prediction?0:GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID]);
 
 	pPlayerInfo->m_Local = 0;
 	pPlayerInfo->m_ClientID = m_ClientID;
 	pPlayerInfo->m_Score = m_Score;
-	pPlayerInfo->m_Team = m_Team;
+	pPlayerInfo->m_Team = m_IsDummy?256:m_Team;
 
 	if(m_ClientID == SnappingClient)
 		pPlayerInfo->m_Local = 1;

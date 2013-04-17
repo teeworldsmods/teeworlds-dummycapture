@@ -69,6 +69,9 @@ public:
 	CCharacterCore *Core() { return &m_Core; }
 	float m_DummyMove;
 	int m_aMoveID[2];
+	CCharacterCore m_PredictedCore;
+	int m_PredictionTick;
+	int m_PredictionLatency;
 
 private:
 	// player controlling this character

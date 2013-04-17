@@ -48,6 +48,9 @@ public:
 	bool m_Paused;
 	CWorldCore m_Core;
 
+	// Dummy DC
+	CWorldCore m_TestCore;
+
 	CGameWorld();
 	~CGameWorld();
 

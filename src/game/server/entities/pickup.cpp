@@ -26,6 +26,13 @@ void CPickup::Reset()
 
 void CPickup::Tick()
 {
+	// Dummy DC
+	if(GameServer()->m_Insta)
+	{
+		m_SpawnTick = 1;
+		return;
+	}
+
 	// wait for respawn
 	if(m_SpawnTick > 0)
 	{

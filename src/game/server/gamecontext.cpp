@@ -13,6 +13,7 @@
 #include <game/gamecore.h>
 #include "gamemodes/dc.h"
 
+#include <stdio.h>
 enum
 {
 	RESET,
@@ -384,6 +385,8 @@ void CGameContext::OnTick()
 	CheckPureTuning();
 
 	// copy tuning
+	// Dummy DC
+	m_World.m_TestCore.m_Tuning = m_Tuning;
 	m_World.m_Core.m_Tuning = m_Tuning;
 	m_World.Tick();
 
@@ -640,10 +643,23 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}*/
 		if(!str_comp_nocase(pMsg->m_pMessage, "/info"))
 		{
-			SendChatTarget(ClientID, "*DC* - DummyCapture mod by Pikotee, v0.2_test");
-			SendChatTarget(ClientID, "Drag dummy into your base to get teampoints");
-			SendChatTarget(ClientID, "Kill enemy for personalpoints");
+			SendChatTarget(ClientID, "*DC* - DummyCapture mod by Pikotee, v0.5");
+			SendChatTarget(ClientID, "");
+			SendChatTarget(ClientID, "Attention: Blunk & QuickTee/r00t are stealing private mods");
+			SendChatTarget(ClientID, "");
 			SendChatTarget(ClientID, "Questions/Mod/Source via Skype (ID: georg96a)");
+			return;
+		}
+		else if(!str_comp_nocase(pMsg->m_pMessage, "/predict") || !str_comp_nocase(pMsg->m_pMessage, "/prediction"))
+		{
+			if(!m_apPlayers[ClientID])
+				return;
+
+			m_apPlayers[ClientID]->m_Prediction ^= true;
+
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "Test-Prediction %s", m_apPlayers[ClientID]->m_Prediction? "enabled" : "disabled");
+			SendChatTarget(ClientID, aBuf);
 			return;
 		}
 		else if(pMsg->m_pMessage[0] == '/')
@@ -1392,6 +1408,24 @@ void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *p
 	}
 }
 
+// Dummy DC
+void CGameContext::ConInsta(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+
+	int Mode;
+
+	if(pResult->NumArguments())
+		pSelf->m_Insta = clamp(pResult->GetInteger(0), 0, 1);
+	else
+		pSelf->m_Insta ^= true;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "Mode switched to %s", pSelf->m_Insta?"Instagib":"Vanilla");
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+	pSelf->SendChatTarget(-1, aBuf);
+}
+
 void CGameContext::OnConsoleInit()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -1413,6 +1447,9 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("force_vote", "ss?r", CFGFLAG_SERVER, ConForceVote, this, "Force a voting option");
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "Clears the voting options");
 	Console()->Register("vote", "r", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
+
+	// Dummy DC
+	Console()->Register("instagib", "?i", CFGFLAG_SERVER, ConInsta, this, "Enable/disable/switch mode (vanilla/insta)");
 
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 }
