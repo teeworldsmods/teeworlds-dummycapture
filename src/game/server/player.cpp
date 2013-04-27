@@ -133,7 +133,7 @@ void CPlayer::Snap(int SnappingClient)
 		return;
 
 	// Dummy DC
-	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : (m_Prediction?0:GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID]);
+	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
 
 	pPlayerInfo->m_Local = 0;
 	pPlayerInfo->m_ClientID = m_ClientID;

@@ -68,12 +68,6 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Core.m_Pos = m_Pos;
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
 
-	// Dummy DC
-	m_PredictedCore.Reset();
-	m_PredictedCore.Init(&GameServer()->m_World.m_TestCore, GameServer()->Collision());
-	m_PredictedCore.m_Pos = m_Pos;
-	GameServer()->m_World.m_TestCore.m_apCharacters[m_pPlayer->GetCID()] = &m_PredictedCore;
-
 	m_ReckoningTick = 0;
 	mem_zero(&m_SendCore, sizeof(m_SendCore));
 	mem_zero(&m_ReckoningCore, sizeof(m_ReckoningCore));
@@ -663,20 +657,6 @@ void CCharacter::Tick()
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
 
-	// Dummy DC
-	CNetObj_Character pTest;
-	m_Core.Write(&pTest);
-	m_PredictedCore.Read(&pTest);
-	m_PredictedCore.m_Input = m_Input;
-
-	float PredictionLatency = m_pPlayer->m_aActLatency[m_pPlayer->GetCID()] * 0.05f;
-	for(m_PredictionTick = 0; m_PredictionTick < PredictionLatency; m_PredictionTick++)
-	{
-		m_PredictedCore.Tick(true);
-		m_PredictedCore.Move();
-		m_PredictedCore.Quantize();
-	}
-
 	// handle death-tiles and leaving gamelayer
 	if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
 		GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
@@ -959,21 +939,12 @@ void CCharacter::Snap(int SnappingClient)
 		// no dead reckoning when paused because the client doesn't know
 		// how far to perform the reckoning
 		pCharacter->m_Tick = 0;
-		m_PredictedCore.Write(pCharacter);
-		//m_Core.Write(pCharacter);
+		m_Core.Write(pCharacter);
 	}
 	else
 	{
-		/*if(GameServer()->m_apPlayers[SnappingClient] && GameServer()->m_apPlayers[SnappingClient]->m_Prediction)
-		{
-			pCharacter->m_Tick = Server()->Tick() + m_PredictionTick;
-			m_PredictedCore.Write(pCharacter);
-		}
-		else*/
-		{
-			pCharacter->m_Tick = m_ReckoningTick;
-			m_SendCore.Write(pCharacter);
-		}
+		pCharacter->m_Tick = m_ReckoningTick;
+		m_SendCore.Write(pCharacter);
 	}
 
 	// set emote

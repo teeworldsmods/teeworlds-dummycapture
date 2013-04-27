@@ -42,7 +42,6 @@ public:
 	bool m_IsDummy;
 	vec2 m_LastPos;
 	bool m_Moved;
-	bool m_Prediction;
 
 	inline float HueToRgb(float v1, float v2, float h)
 	{

@@ -650,18 +650,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			SendChatTarget(ClientID, "Questions/Mod/Source via Skype (ID: georg96a)");
 			return;
 		}
-		else if(!str_comp_nocase(pMsg->m_pMessage, "/predict") || !str_comp_nocase(pMsg->m_pMessage, "/prediction"))
-		{
-			if(!m_apPlayers[ClientID])
-				return;
-
-			m_apPlayers[ClientID]->m_Prediction ^= true;
-
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "Test-Prediction %s", m_apPlayers[ClientID]->m_Prediction? "enabled" : "disabled");
-			SendChatTarget(ClientID, aBuf);
-			return;
-		}
 		else if(pMsg->m_pMessage[0] == '/')
 		{
 			SendChatTarget(ClientID, "Wrong CMD, '/info'?");
