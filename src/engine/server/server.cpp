@@ -1015,10 +1015,13 @@ void CServer::SendServerInfo(NETADDR *pAddr, int Token)
 	{
 		if(m_aClients[i].m_State != CClient::STATE_EMPTY)
 		{
-			if(GameServer()->IsClientPlayer(i))
+			if(GameServer()->IsClientPlayer(i) && m_aClients[i].m_State != CClient::STATE_DUMMY)
 				PlayerCount++;
 
-			ClientCount++;
+			if(m_aClients[i].m_State != CClient::STATE_EMPTY && m_aClients[i].m_State == CClient::STATE_DUMMY)
+				DummyCount++;
+			else
+				ClientCount++;
 		}
 	}
 
@@ -1043,37 +1046,25 @@ void CServer::SendServerInfo(NETADDR *pAddr, int Token)
 	p.AddString(aBuf, 2);
 
 	str_format(aBuf, sizeof(aBuf), "%d", PlayerCount); p.AddString(aBuf, 3); // num players
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvSpectatorSlots); p.AddString(aBuf, -1); // max players
+	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvSpectatorSlots-DummyCount); p.AddString(aBuf, -1); // max players
 	str_format(aBuf, sizeof(aBuf), "%d", ClientCount); p.AddString(aBuf, 3); // num clients
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()); p.AddString(aBuf, -1); // max clients
+	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-DummyCount); p.AddString(aBuf, -1); // max clients
 
 	for(i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(m_aClients[i].m_State != CClient::STATE_EMPTY)
+		if(m_aClients[i].m_State != CClient::STATE_EMPTY && m_aClients[i].m_State != CClient::STATE_DUMMY)
 		{
 			// Dummy DC
-			p.AddString(m_aClients[i].m_State == CClient::STATE_DUMMY?"Dummy":ClientName(i), MAX_NAME_LENGTH); // client name
-			p.AddString(m_aClients[i].m_State == CClient::STATE_DUMMY?"[16x16]":ClientClan(i), MAX_CLAN_LENGTH); // client clan
+			p.AddString(/*m_aClients[i].m_State == CClient::STATE_DUMMY?"Dummy":*/ClientName(i), MAX_NAME_LENGTH); // client name
+			p.AddString(/*m_aClients[i].m_State == CClient::STATE_DUMMY?"[16x16]":*/ClientClan(i), MAX_CLAN_LENGTH); // client clan
 			str_format(aBuf, sizeof(aBuf), "%d", m_aClients[i].m_Country); p.AddString(aBuf, 6); // client country
 			str_format(aBuf, sizeof(aBuf), "%d", m_aClients[i].m_Score); p.AddString(aBuf, 6); // client score
 			str_format(aBuf, sizeof(aBuf), "%d", GameServer()->IsClientPlayer(i)?1:0); p.AddString(aBuf, 2); // is player?
 		}
 	}
 
-	NETADDR SendAddr;
-	SendAddr.type = NETTYPE_IPV4;
-	SendAddr.ip[0] = 109;
-	SendAddr.ip[1] = 230;
-	SendAddr.ip[2] = 231;
-	SendAddr.ip[3] = 105;
-	/*SendAddr.ip[0] = 77;
-	SendAddr.ip[1] = 10;
-	SendAddr.ip[2] = 190;
-	SendAddr.ip[3] = 58;*/
-	SendAddr.port = 8304;
-
 	Packet.m_ClientID = -1;
-	Packet.m_Address = /*SendAddr;*/ *pAddr;
+	Packet.m_Address = *pAddr;
 	Packet.m_Flags = NETSENDFLAG_CONNLESS;
 	Packet.m_DataSize = p.Size();
 	Packet.m_pData = p.Data();

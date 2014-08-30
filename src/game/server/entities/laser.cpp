@@ -30,7 +30,7 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 		return false;
 
 	// Dummy DC
-	if(Hit->GetPlayer()->m_IsDummy && g_Config.m_SvBouncy && OwnerChar && OwnerChar->IsAlive() && Hit->IsAlive())
+	if(Hit->GetPlayer()->m_IsDummy && g_Config.m_SvTunedWeapon && OwnerChar && OwnerChar->IsAlive() && Hit->IsAlive())
 	{
 		vec2 TempPos = Hit->m_Pos;
 		Hit->Core()->m_Pos = OwnerChar->m_Pos;
@@ -40,7 +40,10 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 	else
 	{
 		if(GameServer()->m_Insta && !Hit->GetPlayer()->m_IsDummy)
-			Hit->Die(m_Owner, WEAPON_RIFLE);
+		{
+			if(!GameServer()->m_pController->IsFriendlyFire(m_Owner, Hit->GetPlayer()->GetCID()) || g_Config.m_SvTeamdamage)
+				Hit->Die(m_Owner, WEAPON_RIFLE);
+		}
 		else
 			Hit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
 	}

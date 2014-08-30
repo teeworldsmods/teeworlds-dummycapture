@@ -69,6 +69,8 @@ MACRO_CONFIG_INT(SvRespawnDelay, sv_respawn_delay, 3, 0, 10, CFGFLAG_SERVER, "Ti
 MACRO_CONFIG_INT(SvWrongBox, sv_wrongbox, 5, 0, 100, CFGFLAG_SERVER, "Punishment for dragging dummy into the wrong box")
 MACRO_CONFIG_INT(SvSelfDMG, sv_self_damage, 0, 0, 1, CFGFLAG_SERVER, "Enable/Disable SelfDamage")
 MACRO_CONFIG_INT(SvBouncy, sv_bouncy, 1, 0, 1, CFGFLAG_SERVER, "Modify dummy physics")
+MACRO_CONFIG_INT(SvInfAmmo, sv_infinite_ammo, 0, 0, 1, CFGFLAG_SERVER, "Inf Ammo")
+MACRO_CONFIG_INT(SvTunedWeapon, sv_tuned_weapon, 0, 0, 1, CFGFLAG_SERVER, "Weapons with special Features")
 //MACRO_CONFIG_STR(SvGametype, sv_gametype, 32, "dm", CFGFLAG_SERVER, "Game type (dm, tdm, ctf)")
 
 MACRO_CONFIG_INT(SvTournamentMode, sv_tournament_mode, 0, 0, 1, CFGFLAG_SERVER, "Tournament mode. When enabled, players joins the server as spectator")

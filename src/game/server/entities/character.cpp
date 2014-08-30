@@ -432,7 +432,7 @@ void CCharacter::FireWeapon()
 
 	m_AttackTick = Server()->Tick();
 
-	if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0) // -1 == unlimited
+	if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0 && !g_Config.m_SvInfAmmo) // -1 == unlimited
 		m_aWeapons[m_ActiveWeapon].m_Ammo--;
 
 	if(!m_ReloadTimer)
@@ -563,6 +563,12 @@ void CCharacter::DummyCapture()
 		m_Input.m_TargetY = pChr->m_Pos.y-m_Pos.y;
 	}
 
+	m_ActiveWeapon = WEAPON_GUN;
+	m_aWeapons[WEAPON_GUN].m_Got = true;
+	m_aWeapons[WEAPON_GUN].m_Ammo = (rand()%10)+1;
+	//m_LatestInput.m_Fire++;
+	m_Input.m_Fire++;
+
 	if(!Moving() && IsGrounded())
 	{
 		m_aMoveID[TEAM_RED] = -1;
@@ -623,7 +629,7 @@ void CCharacter::DummyCapture()
 			m_Core.m_Vel.x /= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction):(GameServer()->Tuning()->m_AirFriction); // Reset back to 100% of velocity instead of 50(Ground) and 95(Air)
 			m_Core.m_Vel.x *= IsGrounded()?(GameServer()->Tuning()->m_GroundFriction+0.3f):(GameServer()->Tuning()->m_AirFriction+0.02f); // Set to 80%(Ground) and 98(Air) of velocity
 		}
-		m_Core.m_Vel.y -= GameServer()->Tuning()->m_Gravity/5; // Decrease Gravity to 20%
+		m_Core.m_Vel.y -= GameServer()->Tuning()->m_Gravity/5; // Decrease Gravity by 20%
 	}
 
 }

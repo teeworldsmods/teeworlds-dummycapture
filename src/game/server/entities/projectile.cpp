@@ -84,7 +84,7 @@ void CProjectile::Tick()
 			TargetChr->TakeDamage(m_Direction * max(0.001f, m_Force), m_Damage, m_Owner, m_Weapon);
 
 			// Dummy DC
-			if(TargetChr->GetPlayer()->m_IsDummy && g_Config.m_SvBouncy)
+			if(TargetChr->GetPlayer()->m_IsDummy && g_Config.m_SvTunedWeapon)
 			{
 				if(m_Weapon == WEAPON_GUN)
 					TargetChr->Core()->m_Vel *= 0;
