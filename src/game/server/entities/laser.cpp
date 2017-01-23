@@ -24,34 +24,34 @@ CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEner
 bool CLaser::HitCharacter(vec2 From, vec2 To)
 {
 	vec2 At;
-	CCharacter *OwnerChar = GameServer()->GetPlayerChar(m_Owner);
-	CCharacter *Hit = GameServer()->m_World.IntersectCharacter(m_Pos, To, 0.f, At, OwnerChar);
-	if(!Hit)
+	CCharacter *pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
+	CCharacter *pHit = GameServer()->m_World.IntersectCharacter(m_Pos, To, 0.f, At, pOwnerChar);
+	if(!pHit)
 		return false;
 
 	// Dummy DC
-	if(Hit->GetPlayer()->m_IsDummy && g_Config.m_SvTunedWeapon && OwnerChar && OwnerChar->IsAlive() && Hit->IsAlive())
+	if(pHit->GetPlayer()->m_IsDummy && g_Config.m_SvTunedWeapon && pOwnerChar && pOwnerChar->IsAlive() && pHit->IsAlive())
 	{
-		vec2 TempPos = Hit->m_Pos;
-		Hit->Core()->m_Pos = OwnerChar->m_Pos;
-		OwnerChar->Core()->m_Pos = TempPos;
-		Hit->m_aMoveID[OwnerChar->GetPlayer()->GetTeam()] = OwnerChar->GetPlayer()->GetCID();
+		vec2 TempPos = pHit->m_Pos;
+		pHit->Core()->m_Pos = pOwnerChar->m_Pos;
+		pOwnerChar->Core()->m_Pos = TempPos;
+		pHit->m_aMoveID[pOwnerChar->GetPlayer()->GetTeam()] = pOwnerChar->GetPlayer()->GetCID();
 	}
 	else
 	{
-		if(GameServer()->m_Insta && !Hit->GetPlayer()->m_IsDummy)
+		if(GameServer()->m_Insta && !pHit->GetPlayer()->m_IsDummy)
 		{
-			if(!GameServer()->m_pController->IsFriendlyFire(m_Owner, Hit->GetPlayer()->GetCID()) || g_Config.m_SvTeamdamage)
-				Hit->Die(m_Owner, WEAPON_RIFLE);
+			if(!GameServer()->m_pController->IsFriendlyFire(m_Owner, pHit->GetPlayer()->GetCID()) || g_Config.m_SvTeamdamage)
+				pHit->Die(m_Owner, WEAPON_RIFLE);
 		}
 		else
-			Hit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
+			pHit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
 	}
 
 	m_From = From;
 	m_Pos = At;
 	m_Energy = -1;
-	
+
 	return true;
 }
 
@@ -111,6 +111,11 @@ void CLaser::Tick()
 {
 	if(Server()->Tick() > m_EvalTick+(Server()->TickSpeed()*GameServer()->Tuning()->m_LaserBounceDelay)/1000.0f)
 		DoBounce();
+}
+
+void CLaser::TickPaused()
+{
+	++m_EvalTick;
 }
 
 void CLaser::Snap(int SnappingClient)

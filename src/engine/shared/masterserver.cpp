@@ -45,7 +45,7 @@ public:
 
 	virtual int RefreshAddresses(int Nettype)
 	{
-		if(m_State != STATE_INIT)
+		if(m_State != STATE_INIT && m_State != STATE_READY)
 			return -1;
 
 		dbg_msg("engine/mastersrv", "refreshing master server addresses");
@@ -157,7 +157,7 @@ public:
 						Added = true;
 						break;
 					}
-				
+
 				if(!Added)
 				{
 					for(int i = 0; i < MAX_MASTERSERVERS; ++i)
@@ -192,13 +192,13 @@ public:
 		{
 			char aAddrStr[NETADDR_MAXSTRSIZE];
 			if(m_aMasterServers[i].m_Addr.type != NETTYPE_INVALID)
-				net_addr_str(&m_aMasterServers[i].m_Addr, aAddrStr, sizeof(aAddrStr));
+				net_addr_str(&m_aMasterServers[i].m_Addr, aAddrStr, sizeof(aAddrStr), true);
 			else
 				aAddrStr[0] = 0;
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "%s %s\n", m_aMasterServers[i].m_aHostname, aAddrStr);
-
+			str_format(aBuf, sizeof(aBuf), "%s %s", m_aMasterServers[i].m_aHostname, aAddrStr);
 			io_write(File, aBuf, str_length(aBuf));
+			io_write_newline(File);
 		}
 
 		io_close(File);

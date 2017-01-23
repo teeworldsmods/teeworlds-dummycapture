@@ -18,5 +18,6 @@ mastersrv*
 packetgen*
 teeworlds*
 teeworlds_srv*
-tileset_borderfix*
+dummycapture_srv*
+tileset_border*
 versionsrv*

@@ -54,6 +54,7 @@ protected:
 	int m_aTeamscore[2];
 
 	int m_Warmup;
+	int m_UnpauseTimer;
 	int m_RoundCount;
 
 	int m_GameFlags;
@@ -64,6 +65,7 @@ public:
 	const char *m_pGameType;
 
 	bool IsTeamplay() const;
+	bool IsGameOver() const { return m_GameOverTick != -1; }
 
 	IGameController(class CGameContext *pGameServer);
 	virtual ~IGameController();
@@ -71,6 +73,7 @@ public:
 	virtual void DoWincheck();
 
 	void DoWarmup(int Seconds);
+	void TogglePause();
 
 	void StartRound();
 	void EndRound();

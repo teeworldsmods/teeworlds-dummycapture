@@ -33,6 +33,7 @@ class CConsole : public IConsole
 	};
 
 	int m_FlagMask;
+	int m_ClientID;
 	bool m_StoreCommands;
 	const char *m_paStrokeStr[2];
 	CCommand *m_pFirstCommand;
@@ -54,6 +55,8 @@ class CConsole : public IConsole
 	static void Con_Chain(IResult *pResult, void *pUserData);
 	static void Con_Echo(IResult *pResult, void *pUserData);
 	static void Con_Exec(IResult *pResult, void *pUserData);
+	static void ConToggle(IResult *pResult, void *pUser);
+	static void ConToggleStroke(IResult *pResult, void *pUser);
 	static void ConModCommandAccess(IResult *pResult, void *pUser);
 	static void ConModCommandStatus(IConsole::IResult *pResult, void *pUser);
 
@@ -96,12 +99,11 @@ class CConsole : public IConsole
 			if(this != &Other)
 			{
 				IResult::operator=(Other);
-				int Offset = m_aStringStorage - Other.m_aStringStorage;
 				mem_copy(m_aStringStorage, Other.m_aStringStorage, sizeof(m_aStringStorage));
-				m_pArgsStart = Other.m_pArgsStart + Offset;
-				m_pCommand = Other.m_pCommand + Offset;
+				m_pArgsStart = m_aStringStorage+(Other.m_pArgsStart-Other.m_aStringStorage);
+				m_pCommand = m_aStringStorage+(Other.m_pCommand-Other.m_aStringStorage);
 				for(unsigned i = 0; i < Other.m_NumArgs; ++i)
-					m_apArgs[i] = Other.m_apArgs[i] + Offset;
+					m_apArgs[i] = m_aStringStorage+(Other.m_apArgs[i]-Other.m_aStringStorage);
 			}
 			return *this;
 		}
@@ -156,7 +158,7 @@ class CConsole : public IConsole
 public:
 	CConsole(int FlagMask);
 
-	virtual const CCommandInfo *FirstCommandInfo(int AccessLevel, int Flagmask) const;
+	virtual const CCommandInfo *FirstCommandInfo(int AccessLevel, int FlagMask) const;
 	virtual const CCommandInfo *GetCommandInfo(const char *pName, int FlagMask, bool Temp);
 	virtual void PossibleCommands(const char *pStr, int FlagMask, bool Temp, FPossibleCallback pfnCallback, void *pUser);
 
@@ -170,10 +172,13 @@ public:
 
 	virtual bool LineIsValid(const char *pStr);
 	virtual void ExecuteLine(const char *pStr);
+	virtual void ExecuteLineFlag(const char *pStr, int FlagMask);
+	virtual void ExecuteLineClient(const char *pStr, int ClientID, int Level, int FlagMask);
 	virtual void ExecuteFile(const char *pFilename);
 
 	virtual int RegisterPrintCallback(int OutputLevel, FPrintCallback pfnPrintCallback, void *pUserData);
 	virtual void SetPrintOutputLevel(int Index, int OutputLevel);
+	virtual void SetPrintOutputLevel_Hard(int Index, int OutputLevel);
 	virtual void Print(int Level, const char *pFrom, const char *pStr);
 
 	void SetAccessLevel(int AccessLevel) { m_AccessLevel = clamp(AccessLevel, (int)(ACCESS_LEVEL_ADMIN), (int)(ACCESS_LEVEL_MOD)); }

@@ -21,6 +21,7 @@ IGameController::IGameController(class CGameContext *pGameServer)
 
 	//
 	DoWarmup(g_Config.m_SvWarmup);
+	m_UnpauseTimer = 0;
 	m_GameOverTick = -1;
 	m_SuddenDeath = 0;
 	m_RoundStartTick = Server()->Tick();
@@ -260,7 +261,11 @@ void IGameController::CycleMap()
 		return;
 
 	if(m_RoundCount < g_Config.m_SvRoundsPerMap-1)
+	{
+		if(g_Config.m_SvRoundSwap)
+			GameServer()->SwapTeams();
 		return;
+	}
 
 	// handle maprotation
 	const char *pMapRotation = g_Config.m_SvMaprotation;
@@ -292,8 +297,8 @@ void IGameController::CycleMap()
 		pNextMap = pMapRotation;
 
 	// cut out the next map
-	char aBuf[512];
-	for(int i = 0; i < 512; i++)
+	char aBuf[512] = {0};
+	for(int i = 0; i < 511; i++)
 	{
 		aBuf[i] = pNextMap[i];
 		if(IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
@@ -385,6 +390,30 @@ void IGameController::DoWarmup(int Seconds)
 		m_Warmup = Seconds*Server()->TickSpeed();
 }
 
+void IGameController::TogglePause()
+{
+	if(IsGameOver())
+		return;
+
+	if(GameServer()->m_World.m_Paused)
+	{
+		// unpause
+		if(g_Config.m_SvUnpauseTimer > 0)
+			m_UnpauseTimer = g_Config.m_SvUnpauseTimer*Server()->TickSpeed();
+		else
+		{
+			GameServer()->m_World.m_Paused = false;
+			m_UnpauseTimer = 0;
+		}
+	}
+	else
+	{
+		// pause
+		GameServer()->m_World.m_Paused = true;
+		m_UnpauseTimer = 0;
+	}
+}
+
 bool IGameController::IsFriendlyFire(int ClientID1, int ClientID2)
 {
 	if(ClientID1 == ClientID2)
@@ -421,7 +450,7 @@ bool IGameController::CanBeMovedOnBalance(int ClientID)
 void IGameController::Tick()
 {
 	// do warmup
-	if(m_Warmup)
+	if(!GameServer()->m_World.m_Paused && m_Warmup)
 	{
 		m_Warmup--;
 		if(!m_Warmup)
@@ -438,9 +467,19 @@ void IGameController::Tick()
 			m_RoundCount++;
 		}
 	}
+	else if(GameServer()->m_World.m_Paused && m_UnpauseTimer)
+	{
+		--m_UnpauseTimer;
+		if(!m_UnpauseTimer)
+			GameServer()->m_World.m_Paused = false;
+	}
+
+	// game is Paused
+	if(GameServer()->m_World.m_Paused)
+		++m_RoundStartTick;
 
 	// do team-balancing
-	if (IsTeamplay() && m_UnbalancedTick != -1 && Server()->Tick() > m_UnbalancedTick+g_Config.m_SvTeambalanceTime*Server()->TickSpeed()*60)
+	if(IsTeamplay() && m_UnbalancedTick != -1 && Server()->Tick() > m_UnbalancedTick+g_Config.m_SvTeambalanceTime*Server()->TickSpeed()*60)
 	{
 		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", "Balancing teams");
 
@@ -500,7 +539,6 @@ void IGameController::Tick()
 		
 		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
-			// Dummy
 			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && !Server()->IsAuthed(i) && !GameServer()->m_apPlayers[i]->m_IsDummy)
 			{
 				if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick+g_Config.m_SvInactiveKickTime*Server()->TickSpeed()*60)
@@ -562,7 +600,7 @@ void IGameController::Snap(int SnappingClient)
 	if(GameServer()->m_World.m_Paused)
 		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_PAUSED;
 	pGameInfoObj->m_RoundStartTick = m_RoundStartTick;
-	pGameInfoObj->m_WarmupTimer = m_Warmup;
+	pGameInfoObj->m_WarmupTimer = GameServer()->m_World.m_Paused ? m_UnpauseTimer : m_Warmup;
 
 	pGameInfoObj->m_ScoreLimit = g_Config.m_SvScorelimit;
 	pGameInfoObj->m_TimeLimit = g_Config.m_SvTimelimit;
@@ -611,7 +649,7 @@ bool IGameController::CanJoinTeam(int Team, int NotThisID)
 		}
 	}
 
-	return (aNumplayers[0] + aNumplayers[1]) < g_Config.m_SvMaxClients-g_Config.m_SvSpectatorSlots;
+	return (aNumplayers[0] + aNumplayers[1]) < Server()->MaxClients()-g_Config.m_SvSpectatorSlots;
 }
 
 bool IGameController::CheckTeamBalance()

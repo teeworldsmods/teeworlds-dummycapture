@@ -13,8 +13,10 @@
 #include "snapshot.h"
 
 static const unsigned char gs_aHeaderMarker[7] = {'T', 'W', 'D', 'E', 'M', 'O', 0};
-static const unsigned char gs_ActVersion = 3;
+static const unsigned char gs_ActVersion = 4;
+static const unsigned char gs_OldVersion = 3;
 static const int gs_LengthOffset = 152;
+static const int gs_NumMarkersOffset = 176;
 
 
 CDemoRecorder::CDemoRecorder(class CSnapshotDelta *pSnapshotDelta)
@@ -28,6 +30,7 @@ CDemoRecorder::CDemoRecorder(class CSnapshotDelta *pSnapshotDelta)
 int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetVersion, const char *pMap, unsigned Crc, const char *pType)
 {
 	CDemoHeader Header;
+	CTimelineMarkers TimelineMarkers;
 	if(m_File)
 		return -1;
 
@@ -90,6 +93,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	// Header.m_Length - add this on stop
 	str_timestamp(Header.m_aTimestamp, sizeof(Header.m_aTimestamp));
 	io_write(DemoFile, &Header, sizeof(Header));
+	io_write(DemoFile, &TimelineMarkers, sizeof(TimelineMarkers)); // fill this on stop
 
 	// write map data
 	while(1)
@@ -105,6 +109,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 	m_LastKeyFrame = -1;
 	m_LastTickMarker = -1;
 	m_FirstTick = -1;
+	m_NumTimelineMarkers = 0;
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "Recording to '%s'", pFilename);
@@ -266,11 +271,48 @@ int CDemoRecorder::Stop()
 	aLength[3] = (DemoLength)&0xff;
 	io_write(m_File, aLength, sizeof(aLength));
 
+	// add the timeline markers to the header
+	io_seek(m_File, gs_NumMarkersOffset, IOSEEK_START);
+	char aNumMarkers[4];
+	aNumMarkers[0] = (m_NumTimelineMarkers>>24)&0xff;
+	aNumMarkers[1] = (m_NumTimelineMarkers>>16)&0xff;
+	aNumMarkers[2] = (m_NumTimelineMarkers>>8)&0xff;
+	aNumMarkers[3] = (m_NumTimelineMarkers)&0xff;
+	io_write(m_File, aNumMarkers, sizeof(aNumMarkers));
+	for(int i = 0; i < m_NumTimelineMarkers; i++)
+	{
+		int Marker = m_aTimelineMarkers[i];
+		char aMarker[4];
+		aMarker[0] = (Marker>>24)&0xff;
+		aMarker[1] = (Marker>>16)&0xff;
+		aMarker[2] = (Marker>>8)&0xff;
+		aMarker[3] = (Marker)&0xff;
+		io_write(m_File, aMarker, sizeof(aMarker));
+	}
+
 	io_close(m_File);
 	m_File = 0;
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", "Stopped recording");
 
 	return 0;
+}
+
+void CDemoRecorder::AddDemoMarker()
+{
+	if(m_LastTickMarker < 0 || m_NumTimelineMarkers >= MAX_TIMELINE_MARKERS)
+		return;
+
+	// not more than 1 marker in a second
+	if(m_NumTimelineMarkers > 0)
+	{
+		int Diff = m_LastTickMarker - m_aTimelineMarkers[m_NumTimelineMarkers-1];
+		if(Diff < SERVER_TICK_SPEED*1.0f)
+			return;
+	}
+
+	m_aTimelineMarkers[m_NumTimelineMarkers++] = m_LastTickMarker;
+
+	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "demo_recorder", "Added timeline marker");
 }
 
 
@@ -574,7 +616,7 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		return -1;
 	}
 
-	if(m_Info.m_Header.m_Version < gs_ActVersion)
+	if(m_Info.m_Header.m_Version < gs_OldVersion)
 	{
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), "demo version %d is not supported", m_Info.m_Header.m_Version);
@@ -583,6 +625,8 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		m_File = 0;
 		return -1;
 	}
+	else if(m_Info.m_Header.m_Version > gs_OldVersion)
+		io_read(m_File, &m_Info.m_TimelineMarkers, sizeof(m_Info.m_TimelineMarkers));
 
 	// get demo type
 	if(!str_comp(m_Info.m_Header.m_aType, "client"))
@@ -622,6 +666,19 @@ int CDemoPlayer::Load(class IStorage *pStorage, class IConsole *pConsole, const 
 		mem_free(pMapData);
 	}
 
+	if(m_Info.m_Header.m_Version > gs_OldVersion)
+	{
+		// get timeline markers
+		int Num = ((m_Info.m_TimelineMarkers.m_aNumTimelineMarkers[0]<<24)&0xFF000000) | ((m_Info.m_TimelineMarkers.m_aNumTimelineMarkers[1]<<16)&0xFF0000) |
+					((m_Info.m_TimelineMarkers.m_aNumTimelineMarkers[2]<<8)&0xFF00) | (m_Info.m_TimelineMarkers.m_aNumTimelineMarkers[3]&0xFF);
+		m_Info.m_Info.m_NumTimelineMarkers = Num;
+		for(int i = 0; i < Num && i < MAX_TIMELINE_MARKERS; i++)
+		{
+			char *pTimelineMarker = m_Info.m_TimelineMarkers.m_aTimelineMarkers[i];
+			m_Info.m_Info.m_aTimelineMarkers[i] = ((pTimelineMarker[0]<<24)&0xFF000000) | ((pTimelineMarker[1]<<16)&0xFF0000) |
+													((pTimelineMarker[2]<<8)&0xFF00) | (pTimelineMarker[3]&0xFF);
+		}
+	}
 
 	// scan the file for interessting points
 	ScanFile();
@@ -775,7 +832,7 @@ void CDemoPlayer::GetDemoName(char *pBuffer, int BufferSize) const
 		else if(*pFileName == '.')
 			pEnd = pFileName;
 	}
-	
+
 	int Length = pEnd > pExtractedName ? min(BufferSize, (int)(pEnd-pExtractedName+1)) : BufferSize;
 	str_copy(pBuffer, pExtractedName, Length);
 }
@@ -792,7 +849,7 @@ bool CDemoPlayer::GetDemoInfo(class IStorage *pStorage, const char *pFilename, i
 		return false;
 
 	io_read(File, pDemoHeader, sizeof(CDemoHeader));
-	if(mem_comp(pDemoHeader->m_aMarker, gs_aHeaderMarker, sizeof(gs_aHeaderMarker)) || pDemoHeader->m_Version < gs_ActVersion)
+	if(mem_comp(pDemoHeader->m_aMarker, gs_aHeaderMarker, sizeof(gs_aHeaderMarker)) || pDemoHeader->m_Version < gs_OldVersion)
 	{
 		io_close(File);
 		return false;

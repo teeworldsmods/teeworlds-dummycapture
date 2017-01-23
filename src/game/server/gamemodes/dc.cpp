@@ -11,7 +11,7 @@
 
 CGameControllerDC::CGameControllerDC(class CGameContext *pGameServer) : IGameController(pGameServer)
 {
-	m_pGameType = "*DC*";
+	m_pGameType = "DC";
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
 }
 

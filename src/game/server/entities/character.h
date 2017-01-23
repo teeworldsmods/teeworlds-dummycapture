@@ -30,6 +30,7 @@ public:
 	virtual void Destroy();
 	virtual void Tick();
 	virtual void TickDefered();
+	virtual void TickPaused();
 	virtual void Snap(int SnappingClient);
 
 	bool IsGrounded();
@@ -103,6 +104,7 @@ private:
 
 	// last tick that the player took any action ie some input
 	int m_LastAction;
+	int m_LastNoAmmoSound;
 
 	// these are non-heldback inputs
 	CNetObj_PlayerInput m_LatestPrevInput;
